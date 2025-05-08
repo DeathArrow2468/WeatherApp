@@ -1,0 +1,208 @@
+import javafx.application.Application;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.layout.*;
+import javafx.geometry.Pos;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.paint.*;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.*;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
+public class WeatherApp extends Application{
+    public void init(){
+        System.out.println("Init works");
+    }
+    public static void main(String[] args){
+        launch(args);
+    }
+    public void start(Stage myStage){
+        Canvas canvas=new Canvas(300, 40);  //Width x Height
+        GraphicsContext gc=canvas.getGraphicsContext2D();
+        FlowPane rn=new FlowPane(10,10);
+        Scene myScene=new Scene(rn, 900, 800);
+        rn.setAlignment(Pos.CENTER);
+        myStage.setScene(myScene);
+        myStage.setTitle("WeatherApp");
+        String path_def="file:/C:/Users/Manav/OneDrive/Desktop/JavaProjects/FirstJavaProject/src/skyyy.jpg";    //For wallpaper
+
+        //Start page
+        Button submitB=new Button("Submit");
+        TextField cityTF=new TextField();
+        cityTF.setPromptText("Delhi, Tokyo...");
+        cityTF.setStyle("-fx-prompt-text-fill: #555555");
+        Label cityL=new Label("Enter city:");
+        cityL.setStyle("-fx-text-fill: orange; -fx-font-size: 15px; -fx-background-color: black");
+
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        gc.setStroke(Color.ORANGE);
+        gc.strokeText("The WeatherApp", 0,20);
+        //cityTF.setPrefColumnCount(169);
+
+        //API
+        Label resultL=new Label();
+        resultL.setTextFill(Color.BLACK);
+        resultL.setFont(Font.font("Arial", FontWeight.BOLD, 16 ));
+
+        Label typeOfWeather=new Label();
+        typeOfWeather.setTextFill(Color.WHITE);
+        typeOfWeather.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+
+        submitB.setOnAction(ae->{
+            String city=cityTF.getText();
+            String api_key="5d477d2f78b7ea1c8987ea8afb6b7244";
+            String urlString="http://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + api_key + "&units=metric";
+            
+            //Testing
+            try{
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(urlString)).build();
+            HttpResponse<String> responseHTT = client.send(request, HttpResponse.BodyHandlers.ofString());
+            int status_code = responseHTT.statusCode();
+            System.out.println(status_code);
+            }catch(Exception e){
+                System.out.println("Testing error");
+            }
+
+
+            try{
+                URL url=new URL(urlString);
+                HttpURLConnection connec=(HttpURLConnection) url.openConnection();
+                connec.setRequestMethod("GET");
+                BufferedReader reader=new BufferedReader(new InputStreamReader(connec.getInputStream()));
+                StringBuilder responseSB=new StringBuilder();
+                String line;
+                
+                
+                while((line=reader.readLine())!=null){  //Will contain ALL the possible data
+                    responseSB.append(line);
+                }
+
+                System.out.println(responseSB.toString());
+                
+
+                JSONParser parser = new JSONParser();
+                JSONObject obj = (JSONObject) parser.parse(responseSB.toString());
+
+                JSONObject main = (JSONObject) obj.get("main");  
+                JSONObject wind=(JSONObject) obj.get("wind");
+                JSONObject country=(JSONObject) obj.get("sys");
+                JSONArray weatherArray=(JSONArray) obj.get("weather");
+                JSONObject weather=(JSONObject) weatherArray.get(0);
+
+                double temp = (double) main.get("temp");
+                int temp_far=(int) ((1.8 * temp)+32);
+                double feels_like=(double) main.get("feels_like");
+                int feels_like_far=(int) ((1.8 * feels_like)+32);
+
+                long visibility = (long) obj.get("visibility");
+                
+                Number humidity=(Number) main.get("humidity");
+                
+                Number sea_level=(Number) main.get("sea_level");
+
+                Number windSpeed=(Number) wind.get("speed");
+
+                String countryName=country.get("country").toString();
+
+                String description=(String) weather.get("description");
+                description=description.substring(0,1).toUpperCase()+description.substring(1); //Capitalize the 1st Letter
+                typeOfWeather.setText(description);
+
+                StringBuilder responseFinal=new StringBuilder();
+                responseFinal.append("Temperature: " + temp + "°C (~" + temp_far + "°F)\n");
+                responseFinal.append("Feels Like: " + feels_like + "°C (~" + feels_like_far + "°F)\n");
+
+                responseFinal.append("Humidity: " + humidity + "\n");
+                responseFinal.append("Wind Speed: " + windSpeed + " km/hr\n");
+
+                responseFinal.append("Visibility: " + visibility + " meters\n");
+                responseFinal.append("Sea Level: " + sea_level + " meters\n");
+                responseFinal.append("Country: " + countryName + "\n");
+
+                String path="";
+                    switch (description) {
+                        case "Smoke":
+                            path="file:/C:/Users/Manav/OneDrive/Desktop/JavaProjects/FirstJavaProject/src/haze.jpg";
+                            break;
+                        case "Snow":
+                            path="file:/C:/Users/Manav/OneDrive/Desktop/JavaProjects/FirstJavaProject/src/snow.jpg";
+                            break;
+                        case "Thunderstorm":
+                            path="file:/C:/Users/Manav/OneDrive/Desktop/JavaProjects/FirstJavaProject/src/thunderstorm.jpg";
+                            break;
+                        case "Light rain":
+                            path="file:/C:/Users/Manav/OneDrive/Desktop/JavaProjects/FirstJavaProject/src/rain.jpg";
+                            break;
+                        case "Overcast clouds":
+                            path="file:/C:/Users/Manav/OneDrive/Desktop/JavaProjects/FirstJavaProject/src/darkClouds.jpg";
+                            break;
+                    
+                        default:
+                            path=path_def;
+                            break;
+                    }
+                    
+                    try{
+                        Image backgroundImagee = new Image(path);
+                        BackgroundImage bgImage = new BackgroundImage(
+                            backgroundImagee,
+                            BackgroundRepeat.NO_REPEAT, // Horizontal repeat
+                            BackgroundRepeat.NO_REPEAT, // Vertical repeat
+                            BackgroundPosition.CENTER,  // Position
+                            new BackgroundSize(100, 100, true, true, false, true) // Scale
+                        );
+                        rn.setBackground(new Background(bgImage));
+                    }catch(Exception e){
+                        System.out.println("Error in the background");
+                    }
+
+                reader.close();
+                String responseS=responseFinal.toString();
+                resultL.setText(responseS);
+            }catch(Exception e){
+                System.out.println("Error in API");
+            }
+        });
+
+        //BackGround
+        try{
+            Image backgroundImagee = new Image(path_def);
+            BackgroundImage bgImage = new BackgroundImage(
+                backgroundImagee,
+                BackgroundRepeat.NO_REPEAT, // Horizontal repeat
+                BackgroundRepeat.NO_REPEAT, // Vertical repeat
+                BackgroundPosition.CENTER,  // Position
+                new BackgroundSize(100, 100, true, true, false, true) // Scale
+            );
+            rn.setBackground(new Background(bgImage));
+        }catch(Exception e){
+            System.out.println("Error in the background");
+        }
+
+
+        VBox cityAndButtonVB=new VBox(10, canvas,cityL, cityTF, submitB, resultL, typeOfWeather);
+        rn.requestFocus();
+        rn.getChildren().addAll(cityAndButtonVB);
+        myStage.show();
+    }
+    public void stop(){
+        System.out.println("Application is closed");
+    }
+}
+
